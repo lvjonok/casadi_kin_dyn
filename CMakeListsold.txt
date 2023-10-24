@@ -1,0 +1,147 @@
+cmake_minimum_required(VERSION 3.10)
+
+file(STRINGS "version.yml" VERSION_NUMBER)
+project(casadi_kin_dyn VERSION ${VERSION_NUMBER} LANGUAGES CXX)
+
+# Project properties
+set(PROJECT_ORG cmake-wheel)
+set(PROJECT_NAME casadi_kin_dyn)
+set(PROJECT_DESCRIPTION "This is an example project, to show how to use cmeel")
+set(PROJECT_URL https://github.com/${PROJECT_NAMESPACE}/${PROJECT_NAME})
+
+include(FetchContent)
+
+# Check if the submodule cmake have been initialized
+set(JRL_CMAKE_MODULES "${CMAKE_CURRENT_LIST_DIR}/third_party/jrl-cmakemodules")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/jrl-cmakemodules/base.cmake")
+  message(STATUS "JRL cmakemodules not found. Let's fetch it.")
+  FetchContent_Declare(
+    "jrl-cmakemodules"
+    GIT_REPOSITORY "https://github.com/jrl-umi3218/jrl-cmakemodules.git")
+  FetchContent_MakeAvailable("jrl-cmakemodules")
+  FetchContent_GetProperties("jrl-cmakemodules" SOURCE_DIR JRL_CMAKE_MODULES)
+endif()
+
+# JRL-cmakemodule setup
+include("${JRL_CMAKE_MODULES}/base.cmake")
+include("${JRL_CMAKE_MODULES}/python.cmake")
+
+set(PYTHON_COMPONENTS Interpreter Development.Module)
+find_package(pybind11 QUIET)
+
+if(NOT pybind11_FOUND)
+  message("pybind11 was not found at first")
+  findpython()
+
+  FetchContent_Declare("pybind11"
+                       GIT_REPOSITORY "https://github.com/pybind/pybind11.git")
+  FetchContent_MakeAvailable("pybind11")
+
+  set(pybind11_FOUND, TRUE)
+endif()
+
+find_package(pybind11 QUIET)
+
+# message(PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+
+set(CMAKE_CXX_STANDARD 17)
+
+# # add headers
+# add_subdirectory(third_party/urdfdom_headers)
+# # install
+# install(DIRECTORY third_party/urdfdom_headers/include/
+#         DESTINATION include
+#         FILES_MATCHING PATTERN "*.h*")
+
+find_package(Eigen3 REQUIRED)
+find_package(casadi REQUIRED)
+find_package(urdfdom REQUIRED)
+find_package(urdfdom_headers REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system)
+find_package(pinocchio REQUIRED)
+
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+message(urdfdom_headers_INCLUDE_DIR="${urdfdom_headers_INCLUDE_DIR}")
+
+include_directories(
+    include/
+    ${EIGEN3_INCLUDE_DIR}/../urdfdom_headers
+    ${EIGEN3_INCLUDE_DIR}/../urdfdom
+    ${EIGEN3_INCLUDE_DIR}
+    ${PINOCCHIO_INCLUDE_DIRS}
+    src/
+)
+
+# Compile and install matlogger2 library
+set(LIBRARY_TARGET_NAME casadi_kin_dyn) # set library name
+
+set(${LIBRARY_TARGET_NAME}_SRC
+    src/casadi_kin_dyn.cpp
+    # src/casadi_collision_handler.cpp
+    )
+
+add_library(${LIBRARY_TARGET_NAME} SHARED
+    ${${LIBRARY_TARGET_NAME}_SRC})
+
+# target_link_libraries(${LIBRARY_TARGET_NAME}
+#     PUBLIC
+#     ${PINOCCHIO_LIBRARIES}
+#     casadi
+#     PRIVATE
+#     # ${urdfdom_headers_LIBRARIES}
+#     ${urdfdom_LIBRARIES}
+#     ${Boost_LIBRARIES})
+
+set_target_properties(${LIBRARY_TARGET_NAME} PROPERTIES
+        VERSION 1.1.1) #${${PROJECT_NAME}_VERSION})
+
+# target_include_directories(${LIBRARY_TARGET_NAME}
+#     INTERFACE
+#     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+#     "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>"
+#     ${EIGEN3_INCLUDE_DIR})
+
+# casadi wrapper
+# add_subdirectory(src/casadi_wrapper)
+
+# Specify installation targets, typology and destination folders.
+include(GNUInstallDirs)
+install(TARGETS  ${LIBRARY_TARGET_NAME}
+        EXPORT   ${LIBRARY_TARGET_NAME}
+        LIBRARY  DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib
+        ARCHIVE  DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT lib
+        RUNTIME  DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin)
+
+# Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
+    FILES_MATCHING PATTERN "*.h*"
+    PATTERN ".svn" EXCLUDE
+)
+
+include(InstallBasicPackageFiles)
+install_basic_package_files(${LIBRARY_TARGET_NAME}
+                            VERSION 1.1.1
+                            COMPATIBILITY AnyNewerVersion
+                            EXPORT ${LIBRARY_TARGET_NAME}
+                            VARS_PREFIX ${LIBRARY_TARGET_NAME}
+                            NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
+
+# Compile python bindings
+add_subdirectory(bindings/python/)
+
+# Add the uninstall target
+include(AddUninstallTarget)
+
+# # Add Testing target
+# option(BUILD_TESTS "Compile ${PROJECT_NAME} tests" FALSE)
+
+# if(BUILD_TESTS)
+#   enable_testing()
+#   add_custom_target(test_verbose ${CMAKE_CTEST_COMMAND} -V)
+#   add_subdirectory(tests)
+# endif()
+

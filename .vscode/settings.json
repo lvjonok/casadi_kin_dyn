@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.ino": "c",
+        "*.world": "xml",
+        "*.xacro": "xml",
+        "*.urdf": "xml",
+        "core": "cpp",
+        "specialfunctions": "cpp",
+        "*.ipp": "cpp"
+    }
+}

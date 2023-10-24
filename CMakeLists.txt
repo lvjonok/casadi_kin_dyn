@@ -1,100 +1,149 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.17)
 
-file(STRINGS "version.yml" VERSION_NUMBER)
-project(casadi_kin_dyn VERSION ${VERSION_NUMBER} LANGUAGES CXX)
+set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
 
-set(CMAKE_CXX_STANDARD 17)
+# Project properties
+set(PROJECT_ORG lvjonok)
+set(PROJECT_NAME cmeel_casadi_kin_dyn)
+set(PROJECT_DESCRIPTION "This is an example project, to show how to use cmeel")
+set(PROJECT_URL https://github.com/${PROJECT_NAMESPACE}/${PROJECT_NAME})
 
-find_package(Eigen3 REQUIRED)
-find_package(casadi 3.5.5 REQUIRED)
-find_package(urdfdom REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system)
-find_package(pinocchio REQUIRED)
+# Project options
+option(BUILD_PYTHON_INTERFACE "Build the python binding" ON)
+option(SUFFIX_SO_VERSION "Suffix library name with its version" OFF)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+# Project configuration
+set(PROJECT_USE_CMAKE_EXPORT TRUE)
+set(CUSTOM_HEADER_DIR casadi_kin_dyn)
 
-include_directories(
-    include/
-    ${EIGEN3_INCLUDE_DIR}
-    ${PINOCCHIO_INCLUDE_DIRS}
-    src/
-)
+include(FetchContent)
 
-
-
-# Compile and install matlogger2 library
-set(LIBRARY_TARGET_NAME casadi_kin_dyn) # set library name
-
-set(${LIBRARY_TARGET_NAME}_SRC
-    src/casadi_kin_dyn.cpp
-    src/casadi_collision_handler.cpp
-    )
-
-add_library(${LIBRARY_TARGET_NAME} SHARED
-    ${${LIBRARY_TARGET_NAME}_SRC})
-
-target_link_libraries(${LIBRARY_TARGET_NAME}
-    PUBLIC
-    casadi
-    ${PINOCCHIO_LIBRARIES}
-    PRIVATE
-    ${urdfdom_LIBRARIES}
-    ${Boost_LIBRARIES})
-
-set_target_properties(${LIBRARY_TARGET_NAME} PROPERTIES
-        VERSION ${${PROJECT_NAME}_VERSION})
-
-target_include_directories(${LIBRARY_TARGET_NAME}
-    INTERFACE
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>"
-    ${EIGEN3_INCLUDE_DIR})
-
-
-add_executable(letsee
-    src/letsee.cpp)
-
-target_link_libraries(letsee ${LIBRARY_TARGET_NAME})
-
-# casadi wrapper
-add_subdirectory(src/casadi_wrapper)
-
-# Specify installation targets, typology and destination folders.
-include(GNUInstallDirs)
-install(TARGETS  ${LIBRARY_TARGET_NAME}
-        EXPORT   ${LIBRARY_TARGET_NAME}
-        LIBRARY  DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT shlib
-        ARCHIVE  DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT lib
-        RUNTIME  DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT bin)
-
-# Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
-    FILES_MATCHING PATTERN "*.h*"
-    PATTERN ".svn" EXCLUDE
-)
-
-include(InstallBasicPackageFiles)
-install_basic_package_files(${LIBRARY_TARGET_NAME}
-                            VERSION ${${PROJECT_NAME}_VERSION}
-                            COMPATIBILITY AnyNewerVersion
-                            EXPORT ${LIBRARY_TARGET_NAME}
-                            VARS_PREFIX ${LIBRARY_TARGET_NAME}
-                            NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-
-
-# Compile python bindings
-add_subdirectory(bindings/python/)
-
-# Add the uninstall target
-include(AddUninstallTarget)
-
-# Add Testing target
-option(BUILD_TESTS "Compile ${PROJECT_NAME} tests" FALSE)
-
-if(BUILD_TESTS)
-  enable_testing()
-  add_custom_target(test_verbose ${CMAKE_CTEST_COMMAND} -V)
-  add_subdirectory(tests)
+# Check if the submodule cmake have been initialized
+set(JRL_CMAKE_MODULES "${CMAKE_CURRENT_LIST_DIR}/third_party/jrl-cmakemodules")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/jrl-cmakemodules/base.cmake")
+  message(STATUS "JRL cmakemodules not found. Let's fetch it.")
+  FetchContent_Declare(
+    "jrl-cmakemodules"
+    GIT_REPOSITORY "https://github.com/jrl-umi3218/jrl-cmakemodules.git")
+  FetchContent_MakeAvailable("jrl-cmakemodules")
+  FetchContent_GetProperties("jrl-cmakemodules" SOURCE_DIR JRL_CMAKE_MODULES)
 endif()
 
+# JRL-cmakemodule setup
+include("${JRL_CMAKE_MODULES}/base.cmake")
+include("${JRL_CMAKE_MODULES}/python.cmake")
+
+# Project definition
+compute_project_args(PROJECT_ARGS LANGUAGES CXX)
+project(${PROJECT_NAME} ${PROJECT_ARGS})
+check_minimal_cxx_standard(14 ENFORCE)
+
+# Project dependencies
+if(BUILD_PYTHON_INTERFACE)
+  set(PYTHON_COMPONENTS Interpreter Development.Module)
+  findpython()
+  string(REGEX REPLACE "-" "_" PY_NAME ${PROJECT_NAME})
+  set(${PY_NAME}_INSTALL_DIR ${PYTHON_SITELIB}/${PY_NAME})
+endif()
+
+find_package(pybind11 QUIET)
+
+if(NOT pybind11_FOUND)
+  FetchContent_Declare("pybind11"
+                       GIT_REPOSITORY "https://github.com/pybind/pybind11.git")
+  FetchContent_MakeAvailable("pybind11")
+endif()
+
+# message(FATAL_ERROR "PYNAME IS: ${PY_NAME}")
+
+# Check requirements
+find_package(Eigen3 REQUIRED)
+find_package(casadi REQUIRED)
+find_package(urdfdom REQUIRED)
+find_package(urdfdom_headers REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system)
+find_package(pinocchio REQUIRED)
+find_package(tinyxml REQUIRED)
+
+# Main Library
+include_directories(
+  include/
+  src/
+  ${EIGEN3_INCLUDE_DIR}/../urdfdom_headers
+  ${EIGEN3_INCLUDE_DIR}/../urdfdom
+  # ${EIGEN3_INCLUDE_DIR}/../tinyxml
+  ${EIGEN3_INCLUDE_DIR}
+  ${EIGEN3_INCLUDE_DIR}/..
+  # ${PINOCCHIO_INCLUDE_DIRS}
+)
+
+set(${PROJECT_NAME}_HEADERS include/${HEADER_DIR}/casadi_kin_dyn.h)
+
+set(${PROJECT_NAME}_SOURCES src/casadi_kin_dyn.cpp)
+
+add_library(
+  ${PROJECT_NAME} 
+  SHARED 
+  ${${PROJECT_NAME}_SOURCES}
+  ${${PROJECT_NAME}_HEADERS}
+)
+
+target_link_libraries(
+  ${PROJECT_NAME} 
+  PUBLIC
+  # ${PINOCCHIO_LIBRARIES}
+  # casadi
+  # # PRIVATE
+  # ${urdfdom_headers_LIBRARIES}
+  # ${urdfdom_LIBRARIES}
+  # ${Boost_LIBRARIES}
+)
+
+target_include_directories(
+  ${PROJECT_NAME} 
+  PUBLIC 
+  $<INSTALL_INTERFACE:include>
+  # INTERFACE
+  # "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  # "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>"
+  # ${EIGEN3_INCLUDE_DIR}/../urdfdom_headers
+  # ${EIGEN3_INCLUDE_DIR}/../urdfdom
+  # ${EIGEN3_INCLUDE_DIR}/..
+  # ${EIGEN3_INCLUDE_DIR}
+  # ${PINOCCHIO_INCLUDE_DIRS}
+)
+
+if(SUFFIX_SO_VERSION)
+  set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
+endif()
+
+# # Main Executable
+# set(${PROJECT_NAME}_EXE cmeel-add)
+# add_executable(${${PROJECT_NAME}_EXE} src/main.cpp)
+# target_link_libraries(${${PROJECT_NAME}_EXE} ${PROJECT_NAME})
+
+# if(UNIX)
+#   get_relative_rpath(${CMAKE_INSTALL_BINDIR} ${PROJECT_NAME}_INSTALL_RPATH)
+#   set_target_properties(
+#     ${${PROJECT_NAME}_EXE} PROPERTIES INSTALL_RPATH
+#                                       "${${PROJECT_NAME}_INSTALL_RPATH}")
+# endif()
+
+# Python Bindings
+if(BUILD_PYTHON_INTERFACE)
+  add_subdirectory(bindings/python)
+endif()
+
+# # Unit tests
+# add_subdirectory(tests)
+
+# Installation
+# remove_definitions(-Werror)
+target_compile_options(${PROJECT_NAME} PUBLIC -Wno-error)
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${TARGETS_EXPORT_NAME}
+  DESTINATION ${CMAKE_INSTALL_LIBDIR})
+# install(TARGETS ${${PROJECT_NAME}_EXE}
+#         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# install(FILES package.xml DESTINATION share/${PROJECT_NAME})

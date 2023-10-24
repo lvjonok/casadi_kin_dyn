@@ -1,6 +1,36 @@
+[project]
+name = "cmeel_casadi_kin_dyn"
+version = "0.2.3"
+description = "This is an example project, to show how to use cmeel"
+readme = "README.md"
+requires-python = ">= 3.8"
+license = "BSD-2-Clause"
+authors = [{name = "Guilhem Saurel", email = "guilhem.saurel@laas.fr"}]
+requires = [
+    "pin",
+    "casadi",
+]
+
+[project.urls]
+homepage = "https://github.com/cmake-wheel/cmeel-example"
+repository = "https://github.com/cmake-wheel/cmeel-example.git"
+changelog = "https://github.com/cmake-wheel/cmeel-example/CHANGELOG.md"
+
 [build-system]
 requires = [
-    "setuptools>=42",
-    "wheel"
+    # "pybind11",
+    "cmeel[build]", 
+    # "casadi",
+    "cmeel_casadi-20230000.0-4-py3-none-manylinux_2_28_x86_64.whl",
+    #"cmeel-casadi@git+https://github.com/lvjonok/cmeel-casadi",
+    "pin", 
+    "eigenpy",
+    "cmeel-tinyxml",
+    "cmeel-eigen", #@git+https://gepgitlab.laas.fr/cmake-wheel/cmeel-eigen",
+    "cmeel-urdfdom_headers", #@git+https://github.com/cmake-wheel/cmeel-urdfdom-headers",
+    "cmeel-urdfdom", # @git+https://github.com/cmake-wheel/cmeel-urdfdom",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "cmeel.build"
+
+[tool.cmeel]
+run-tests=false

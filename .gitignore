@@ -105,3 +105,4 @@ venv.bak/
 .mypy_cache/
 
 CMakeLists.txt.user
+third_party/

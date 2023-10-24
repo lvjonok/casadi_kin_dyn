@@ -1,3 +1,6 @@
+#include <urdf_model/model.h>
+#include <urdf_parser/urdf_parser.h>
+
 #include <casadi_kin_dyn/casadi_kin_dyn.h>
 
 #include <casadi/casadi.hpp>
@@ -17,7 +20,7 @@
 #include <pinocchio/autodiff/casadi.hpp>
 #include <pinocchio/algorithm/aba.hpp>
 
-#include <urdf_parser/urdf_parser.h>
+
 
 
 
