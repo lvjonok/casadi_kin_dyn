@@ -1,7 +1,7 @@
-import os
-import sys
+import casadi_kin_dyn.casadi_kin_dyn as cas_kin_dyn
+import casadi
 
-from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
-
-urdf = open('cart_pole.urdf', 'r').read()
+urdf = open("cart_pole.urdf", "r").read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
+
+kindyn.nq

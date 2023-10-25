@@ -37,7 +37,7 @@ auto make_deserialized(casadi::Function (T::*mem_fn)(Args... args))
      return deserialized;
 }
 
-PYBIND11_MODULE(CASADI_KIN_DYN_MODULE, m)
+PYBIND11_MODULE(casadi_kin_dyn, m)
 {
 
      py::class_<CasadiKinDyn, CasadiKinDyn::Ptr> casadikindyn(m, "CasadiKinDyn");

@@ -1,16 +1,14 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
-
 # Project properties
 set(PROJECT_ORG lvjonok)
-set(PROJECT_NAME cmeel_casadi_kin_dyn)
+set(PROJECT_NAME casadi-kin-dyn)
 set(PROJECT_DESCRIPTION "This is an example project, to show how to use cmeel")
 set(PROJECT_URL https://github.com/${PROJECT_NAMESPACE}/${PROJECT_NAME})
 
 # Project options
 option(BUILD_PYTHON_INTERFACE "Build the python binding" ON)
-option(SUFFIX_SO_VERSION "Suffix library name with its version" OFF)
+option(SUFFIX_SO_VERSION "Suffix library name with its version" ON)
 
 # Project configuration
 set(PROJECT_USE_CMAKE_EXPORT TRUE)
@@ -54,8 +52,6 @@ if(NOT pybind11_FOUND)
   FetchContent_MakeAvailable("pybind11")
 endif()
 
-# message(FATAL_ERROR "PYNAME IS: ${PY_NAME}")
-
 # Check requirements
 find_package(Eigen3 REQUIRED)
 find_package(casadi REQUIRED)
@@ -71,10 +67,8 @@ include_directories(
   src/
   ${EIGEN3_INCLUDE_DIR}/../urdfdom_headers
   ${EIGEN3_INCLUDE_DIR}/../urdfdom
-  # ${EIGEN3_INCLUDE_DIR}/../tinyxml
-  ${EIGEN3_INCLUDE_DIR}
   ${EIGEN3_INCLUDE_DIR}/..
-  # ${PINOCCHIO_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 set(${PROJECT_NAME}_HEADERS include/${HEADER_DIR}/casadi_kin_dyn.h)
@@ -88,62 +82,29 @@ add_library(
   ${${PROJECT_NAME}_HEADERS}
 )
 
-target_link_libraries(
-  ${PROJECT_NAME} 
-  PUBLIC
-  # ${PINOCCHIO_LIBRARIES}
-  # casadi
-  # # PRIVATE
-  # ${urdfdom_headers_LIBRARIES}
-  # ${urdfdom_LIBRARIES}
-  # ${Boost_LIBRARIES}
-)
+# target_link_libraries(
+#   ${PROJECT_NAME} 
+#   PUBLIC
+# )
 
 target_include_directories(
   ${PROJECT_NAME} 
   PUBLIC 
   $<INSTALL_INTERFACE:include>
-  # INTERFACE
-  # "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  # "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>"
-  # ${EIGEN3_INCLUDE_DIR}/../urdfdom_headers
-  # ${EIGEN3_INCLUDE_DIR}/../urdfdom
-  # ${EIGEN3_INCLUDE_DIR}/..
-  # ${EIGEN3_INCLUDE_DIR}
-  # ${PINOCCHIO_INCLUDE_DIRS}
 )
 
 if(SUFFIX_SO_VERSION)
   set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
 endif()
 
-# # Main Executable
-# set(${PROJECT_NAME}_EXE cmeel-add)
-# add_executable(${${PROJECT_NAME}_EXE} src/main.cpp)
-# target_link_libraries(${${PROJECT_NAME}_EXE} ${PROJECT_NAME})
-
-# if(UNIX)
-#   get_relative_rpath(${CMAKE_INSTALL_BINDIR} ${PROJECT_NAME}_INSTALL_RPATH)
-#   set_target_properties(
-#     ${${PROJECT_NAME}_EXE} PROPERTIES INSTALL_RPATH
-#                                       "${${PROJECT_NAME}_INSTALL_RPATH}")
-# endif()
-
 # Python Bindings
 if(BUILD_PYTHON_INTERFACE)
   add_subdirectory(bindings/python)
 endif()
 
-# # Unit tests
-# add_subdirectory(tests)
-
 # Installation
-# remove_definitions(-Werror)
 target_compile_options(${PROJECT_NAME} PUBLIC -Wno-error)
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${TARGETS_EXPORT_NAME}
   DESTINATION ${CMAKE_INSTALL_LIBDIR})
-# install(TARGETS ${${PROJECT_NAME}_EXE}
-#         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-# install(FILES package.xml DESTINATION share/${PROJECT_NAME})
