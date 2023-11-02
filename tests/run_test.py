@@ -5,4 +5,4 @@ urdf = open("cart_pole.urdf", "r").read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
 
 kindyn.nq()
-print(kindyn.potentialEnergy()) 
+print(kindyn.potentialEnergy())
