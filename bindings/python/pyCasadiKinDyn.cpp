@@ -72,6 +72,13 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
                &CasadiKinDyn::frameAcceleration))
       .def("kineticEnergy", make_deserialized(&CasadiKinDyn::kineticEnergy))
       .def("potentialEnergy", make_deserialized(&CasadiKinDyn::potentialEnergy))
+      .def("jointTorqueRegressor",
+           make_deserialized(&CasadiKinDyn::jointTorqueRegressor))
+      .def("kineticEnergyRegressor",
+           make_deserialized(&CasadiKinDyn::kineticEnergyRegressor))
+      .def("potentialEnergyRegressor",
+           make_deserialized(&CasadiKinDyn::potentialEnergyRegressor))
+
       .def("mass", &CasadiKinDyn::mass)
       .def("urdf", &CasadiKinDyn::urdf);
 

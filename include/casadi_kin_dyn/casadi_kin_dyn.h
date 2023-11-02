@@ -78,6 +78,12 @@ public:
 
   casadi::Function potentialEnergy();
 
+  casadi::Function jointTorqueRegressor();
+
+  casadi::Function kineticEnergyRegressor();
+
+  casadi::Function potentialEnergyRegressor();
+
   std::vector<double> q_min() const;
 
   std::vector<double> q_max() const;

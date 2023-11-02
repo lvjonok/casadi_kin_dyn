@@ -1,6 +1,3 @@
-#include <urdf_model/model.h>
-#include <urdf_parser/urdf_parser.h>
-
 #include <casadi_kin_dyn/casadi_kin_dyn.h>
 
 #include <casadi/casadi.hpp>
@@ -14,10 +11,14 @@
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/jacobian.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
+#include <pinocchio/algorithm/kinematics.hpp>
 #include <pinocchio/algorithm/model.hpp>
+#include <pinocchio/algorithm/regressor.hpp>
 #include <pinocchio/algorithm/rnea.hpp>
 #include <pinocchio/autodiff/casadi.hpp>
 #include <pinocchio/parsers/urdf.hpp>
+
+#include <urdf_parser/urdf_parser.h>
 
 namespace casadi_kin_dyn {
 
@@ -69,6 +70,12 @@ public:
   casadi::Function kineticEnergy();
 
   casadi::Function potentialEnergy();
+
+  casadi::Function jointTorqueRegressor();
+
+  casadi::Function kineticEnergyRegressor();
+
+  casadi::Function potentialEnergyRegressor();
 
   casadi::Function aba();
 
@@ -388,6 +395,97 @@ casadi::Function CasadiKinDyn::Impl::potentialEnergy() {
                                    {"DU"});
 
   return POTENTIALENERGY;
+}
+
+casadi::Function CasadiKinDyn::Impl::jointTorqueRegressor() {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  pinocchio::computeJointTorqueRegressor(model, data, cas_to_eig(_q),
+                                         cas_to_eig(_qdot), cas_to_eig(_qddot));
+
+  auto regressor = eigmat_to_cas(data.jointTorqueRegressor);
+  casadi::Function JointTorqueRegressor("jointTorqueRegressor",
+                                        {_q, _qdot, _qddot}, {regressor},
+                                        {"q", "v", "a"}, {"regressor"});
+
+  return JointTorqueRegressor;
+}
+
+casadi::Function CasadiKinDyn::Impl::kineticEnergyRegressor() {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  // compute forward kinematics
+  pinocchio::forwardKinematics(model, data, cas_to_eig(_q), cas_to_eig(_qdot));
+
+  int n_bodies = _model_dbl.njoints - 1;
+
+  // create a kinetic energy regressor of dimension [nv x 10]
+  auto regressor = casadi::SX::zeros(n_bodies, 10);
+  // auto regressor = casadi::SX::zeros(model.nv, 10);
+
+  for (auto joint_idx = 0; joint_idx < n_bodies; joint_idx++) {
+    // find linear and angular velocity of the chosen joint
+    auto vel =
+        pinocchio::getVelocity(model, data, joint_idx + 1, pinocchio::LOCAL);
+
+    // fill in the regressor
+    auto vl = vel.linear();
+    auto va = vel.angular();
+
+    regressor(joint_idx, 0) =
+        0.5 * (vl[0] * vl[0] + vl[1] * vl[1] + vl[2] * vl[2]);
+    regressor(joint_idx, 1) = -va[1] * vl[2] + va[2] * vl[1];
+    regressor(joint_idx, 2) = va[0] * vl[2] - va[2] * vl[0];
+    regressor(joint_idx, 3) = -va[0] * vl[1] + va[1] * vl[0];
+    regressor(joint_idx, 4) = 0.5 * va[0] * va[0];
+    regressor(joint_idx, 5) = va[0] * va[1];
+    regressor(joint_idx, 6) = 0.5 * va[1] * va[1];
+    regressor(joint_idx, 7) = va[0] * va[2];
+    regressor(joint_idx, 8) = va[1] * va[2];
+    regressor(joint_idx, 9) = 0.5 * va[2] * va[2];
+  }
+
+  casadi::Function KineticRegressor("kineticEnergyRegressor", {_q, _qdot},
+                                    {regressor}, {"q", "v"},
+                                    {"kinetic_regressor"});
+
+  return KineticRegressor;
+}
+
+casadi::Function CasadiKinDyn::Impl::potentialEnergyRegressor() {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  // compute forward kinematics
+  pinocchio::forwardKinematics(model, data, cas_to_eig(_q));
+
+  int n_bodies = _model_dbl.njoints - 1;
+
+  // create a kinetic energy regressor of dimension [nv x 10]
+  auto regressor = casadi::SX::zeros(n_bodies, 10);
+
+  // get gravity vector. In pinocchio it is stored as (0, 0, -9.81)
+  auto gT = (model.gravity.linear());
+
+  for (auto joint_idx = 0; joint_idx < n_bodies; joint_idx++) {
+    // find position and rotation of body frame
+    auto r = (data.oMi[joint_idx + 1].translation());
+    auto R = (data.oMi[joint_idx + 1].rotation());
+
+    auto res = R * gT;
+    regressor(joint_idx, 0) = gT.dot(r)(0);
+    regressor(joint_idx, 1) = res(0);
+    regressor(joint_idx, 2) = res(1);
+    regressor(joint_idx, 3) = res(2);
+  }
+
+  casadi::Function PotentialRegressor("potentialEnergyRegressor", {_q},
+                                      {regressor}, {"q"},
+                                      {"potential_regressor"});
+
+  return PotentialRegressor;
 }
 
 casadi::Function CasadiKinDyn::Impl::aba() {
@@ -732,6 +830,19 @@ casadi::Function CasadiKinDyn::kineticEnergy() {
 
 casadi::Function CasadiKinDyn::potentialEnergy() {
   return impl().potentialEnergy();
+}
+
+// Regressors
+casadi::Function CasadiKinDyn::jointTorqueRegressor() {
+  return impl().jointTorqueRegressor();
+}
+
+casadi::Function CasadiKinDyn::kineticEnergyRegressor() {
+  return impl().kineticEnergyRegressor();
+}
+
+casadi::Function CasadiKinDyn::potentialEnergyRegressor() {
+  return impl().potentialEnergyRegressor();
 }
 
 std::vector<double> CasadiKinDyn::q_min() const { return impl().q_min(); }
