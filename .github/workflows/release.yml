@@ -2,8 +2,8 @@ name: Release on GitHub & PyPI
 
 on:
   push:
-    # tags:
-    #   - "v*"
+    tags:
+      - "v*"
 
 jobs:
   build:
@@ -11,20 +11,10 @@ jobs:
     runs-on: "${{ matrix.os }}"
     strategy:
       matrix:
-        os: [
-            "ubuntu-latest",
-            # "macos-latest",
-          ]
+        os: ["ubuntu-latest"]
         arch: ["x86_64"]
-        build: [
-            # "cp38-*",
-            # ["cp39-manylinux_x86_64", "python3.9"],
-            "cp310-manylinux_x86_64",
-            # ["cp311-manylinux", "python3.11"],
-            # "pp38-*",
-            # "pp39-*",
-            # "pp310-*",
-          ]
+        build:
+          ["cp39-manylinux_x86_64", "cp310-manylinux_x86_64", "cp311-manylinux_x86_64"]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -41,33 +31,33 @@ jobs:
         with:
           path: wh
 
-  # sdist:
-  #   name: "build sdist"
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/setup-python@v4
-  #       with:
-  #         python-version: 3.11
-  #     - name: setup
-  #       run: |
-  #         python -m pip install -U pip
-  #         python -m pip install build cmeel[build]
-  #     - name: build sdist
-  #       run: python -m build -nso dist .
-  #     - uses: actions/upload-artifact@v3
-  #       with:
-  #         path: dist
-  # release:
-  #   needs: ["build", "sdist"]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/download-artifact@v3
-  #     - run: python -m pip install twine
-  #     - run: twine upload -u __token__ -p "${{ secrets.PYPI_TOKEN }}" artifact/cmeel_casadi*.whl
-  #     - run: twine upload -u __token__ -p "${{ secrets.PYPI_TOKEN }}" artifact/cmeel_casadi*.tar.gz || true
-  #     - run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-  #     - run: gh release create -t "Release ${{ env.TAG}}" -n "$(awk '/## \[${{ env.TAG }}] - /{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md)" ${{ env.TAG }} artifact/cmeel_casadi*.{whl,tar.gz}
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  sdist:
+    name: "build sdist"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: setup
+        run: |
+          python -m pip install -U pip
+          python -m pip install build cmeel[build]
+      - name: build sdist
+        run: python -m build -nso dist .
+      - uses: actions/upload-artifact@v3
+        with:
+          path: dist
+  release:
+    needs: ["build", "sdist"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+      - run: python -m pip install twine
+      - run: twine upload -u __token__ -p "${{ secrets.PYPI_TOKEN }}" artifact/cmeel_casadi_kin_dyn*.whl
+      - run: twine upload -u __token__ -p "${{ secrets.PYPI_TOKEN }}" artifact/cmeel_casadi_kin_dyn*.tar.gz || true
+      - run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - run: gh release create -t "Release ${{ env.TAG}}" -n "$(awk '/## \[${{ env.TAG }}] - /{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md)" ${{ env.TAG }} artifact/cmeel_casadi_kin_dyn*.{whl,tar.gz}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
