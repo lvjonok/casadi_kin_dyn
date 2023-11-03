@@ -6,6 +6,15 @@ readme = "README.md"
 requires-python = ">= 3.9"
 license = "MIT License"
 authors = [{ name = "Lev Kozlov", email = "kozlov.l.a10@gmail.com" }]
+dependencies = [
+    "cmeel_casadi",
+    "pin",
+    "eigenpy",
+    "cmeel-tinyxml",
+    "cmeel-eigen",
+    "cmeel-urdfdom_headers",
+    "cmeel-urdfdom",
+]
 
 [project.urls]
 homepage = "https://github.com/lvjonok/casadi_kin_dyn"
