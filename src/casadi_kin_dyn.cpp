@@ -61,6 +61,9 @@ public:
 
   casadi::Function jacobian(std::string link_name, ReferenceFrame ref);
 
+  casadi::Function jacobianTimeVariation(std::string link_name,
+                                         ReferenceFrame ref);
+
   casadi::Function frameVelocity(std::string link_name, ReferenceFrame ref);
 
   casadi::Function frameAcceleration(std::string link_name, ReferenceFrame ref);
@@ -698,6 +701,30 @@ casadi::Function CasadiKinDyn::Impl::jacobian(std::string link_name,
   return JACOBIAN;
 }
 
+casadi::Function
+CasadiKinDyn::Impl::jacobianTimeVariation(std::string link_name,
+                                          ReferenceFrame ref) {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  auto frame_idx = model.getFrameId(link_name);
+
+  Eigen::Matrix<Scalar, 6, -1> dJ;
+  dJ.setZero(6, nv());
+
+  pinocchio::computeJointJacobiansTimeVariation(model, data, cas_to_eig(_q),
+                                                cas_to_eig(_qdot));
+  pinocchio::getFrameJacobianTimeVariation(
+      model, data, frame_idx, pinocchio::ReferenceFrame(ref),
+      dJ); //"LOCAL" DEFAULT PINOCCHIO COMPUTATION
+
+  auto dJac = eigmat_to_cas(dJ);
+  casadi::Function JACOBIAN("jacobianTimeVariation", {_q, _qdot}, {dJac},
+                            {"q", "v"}, {"dJ"});
+
+  return JACOBIAN;
+}
+
 casadi::Function CasadiKinDyn::Impl::crba() {
   auto model = _model_dbl.cast<Scalar>();
   pinocchio::DataTpl<Scalar> data(model);
@@ -816,6 +843,11 @@ casadi::Function CasadiKinDyn::centerOfMass() { return impl().centerOfMass(); }
 casadi::Function CasadiKinDyn::jacobian(std::string link_name,
                                         ReferenceFrame ref) {
   return impl().jacobian(link_name, ref);
+}
+
+casadi::Function CasadiKinDyn::jacobianTimeVariation(std::string link_name,
+                                                     ReferenceFrame ref) {
+  return impl().jacobianTimeVariation(link_name, ref);
 }
 
 CasadiKinDyn::~CasadiKinDyn() {}

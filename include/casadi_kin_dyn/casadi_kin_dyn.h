@@ -70,6 +70,9 @@ public:
 
   casadi::Function jacobian(std::string link_name, ReferenceFrame ref);
 
+  casadi::Function jacobianTimeVariation(std::string link_name,
+                                         ReferenceFrame ref);
+
   casadi::Function frameVelocity(std::string link_name, ReferenceFrame ref);
 
   casadi::Function frameAcceleration(std::string link_name, ReferenceFrame ref);
