@@ -63,6 +63,8 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .def("fk",
            make_deserialized<CasadiKinDyn, std::string>(&CasadiKinDyn::fk))
       .def("centerOfMass", make_deserialized(&CasadiKinDyn::centerOfMass))
+      .def("jacobianCenterOfMass", make_deserialized<CasadiKinDyn, bool>(
+                                       &CasadiKinDyn::jacobianCenterOfMass))
       .def("jacobian", make_deserialized<CasadiKinDyn, std::string, Ref>(
                            &CasadiKinDyn::jacobian))
       .def("jacobianTimeVariation",

@@ -68,6 +68,8 @@ public:
 
   casadi::Function centerOfMass();
 
+  casadi::Function jacobianCenterOfMass(bool computeSubtrees);
+
   casadi::Function jacobian(std::string link_name, ReferenceFrame ref);
 
   casadi::Function jacobianTimeVariation(std::string link_name,

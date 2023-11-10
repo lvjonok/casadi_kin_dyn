@@ -59,6 +59,8 @@ public:
 
   casadi::Function centerOfMass();
 
+  casadi::Function jacobianCenterOfMass(bool computeSubtrees);
+
   casadi::Function jacobian(std::string link_name, ReferenceFrame ref);
 
   casadi::Function jacobianTimeVariation(std::string link_name,
@@ -678,6 +680,21 @@ casadi::Function CasadiKinDyn::Impl::centerOfMass() {
   return CoM;
 }
 
+casadi::Function
+CasadiKinDyn::Impl::jacobianCenterOfMass(bool computeSubtrees) {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  auto Jcom = pinocchio::jacobianCenterOfMass(model, data, cas_to_eig(_q),
+                                              computeSubtrees);
+
+  auto Jcom_cas = eigmat_to_cas(Jcom);
+  casadi::Function JACCOM("jacobianCenterOfMass", {_q}, {Jcom_cas}, {"q"},
+                          {"Jcom"});
+
+  return JACCOM;
+}
+
 casadi::Function CasadiKinDyn::Impl::jacobian(std::string link_name,
                                               ReferenceFrame ref) {
   auto model = _model_dbl.cast<Scalar>();
@@ -839,6 +856,10 @@ casadi::Function CasadiKinDyn::frameAcceleration(std::string link_name,
 }
 
 casadi::Function CasadiKinDyn::centerOfMass() { return impl().centerOfMass(); }
+
+casadi::Function CasadiKinDyn::jacobianCenterOfMass(bool computeSubtrees) {
+  return impl().jacobianCenterOfMass(computeSubtrees);
+}
 
 casadi::Function CasadiKinDyn::jacobian(std::string link_name,
                                         ReferenceFrame ref) {
