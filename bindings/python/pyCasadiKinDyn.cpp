@@ -49,6 +49,7 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .def("q_max", &CasadiKinDyn::q_max)
       .def("joint_iq", &CasadiKinDyn::joint_iq)
       .def("joint_nq", &CasadiKinDyn::joint_nq)
+      .def("joint_type", &CasadiKinDyn::joint_type)
       .def("childLink", &CasadiKinDyn::childLink)
       .def("parentLink", &CasadiKinDyn::parentLink)
       .def("joint_names", &CasadiKinDyn::joint_names)

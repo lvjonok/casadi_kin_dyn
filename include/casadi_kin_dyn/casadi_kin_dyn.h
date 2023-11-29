@@ -40,6 +40,8 @@ public:
 
   int joint_iq(const std::string &jname) const;
 
+  std::string joint_type(const std::string &jname) const;
+
   Eigen::VectorXd mapToQ(std::map<std::string, double> jmap);
 
   Eigen::VectorXd mapToV(std::map<std::string, double> jmap);
