@@ -90,6 +90,8 @@ public:
 
   int joint_iq(const std::string &jname) const;
 
+  std::string joint_type(const std::string &jname) const;
+
   std::string parentLink(const std::string &jname) const;
 
   std::string childLink(const std::string &jname) const;
@@ -529,6 +531,16 @@ int CasadiKinDyn::Impl::joint_iq(const std::string &jname) const {
   return _model_dbl.idx_qs[jid];
 }
 
+std::string CasadiKinDyn::Impl::joint_type(const std::string &jname) const {
+  size_t jid = _model_dbl.getJointId(jname);
+
+  if (jid >= _model_dbl.njoints) {
+    throw std::invalid_argument("joint '" + jname + "' undefined");
+  }
+
+  return _model_dbl.joints[jid].shortname();
+}
+
 std::string CasadiKinDyn::Impl::parentLink(const std::string &jname) const {
   return _urdf->getJoint(jname)->parent_link_name;
 }
@@ -801,6 +813,10 @@ int CasadiKinDyn::nv() const { return impl().nv(); }
 
 int CasadiKinDyn::joint_nq(const std::string &jname) const {
   return impl().joint_nq(jname);
+}
+
+std::string CasadiKinDyn::joint_type(const std::string &jname) const {
+  return impl().joint_type(jname);
 }
 
 int CasadiKinDyn::joint_iq(const std::string &jname) const {
