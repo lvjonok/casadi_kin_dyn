@@ -429,8 +429,7 @@ casadi::Function CasadiKinDyn::Impl::kineticEnergyRegressor() {
   int n_bodies = _model_dbl.njoints - 1;
 
   // create a kinetic energy regressor of dimension [nv x 10]
-  auto regressor = casadi::SX::zeros(n_bodies, 10);
-  // auto regressor = casadi::SX::zeros(model.nv, 10);
+  auto regressor = casadi::SX::zeros(1, n_bodies * 10);
 
   for (auto joint_idx = 0; joint_idx < n_bodies; joint_idx++) {
     // find linear and angular velocity of the chosen joint
@@ -441,17 +440,17 @@ casadi::Function CasadiKinDyn::Impl::kineticEnergyRegressor() {
     auto vl = vel.linear();
     auto va = vel.angular();
 
-    regressor(joint_idx, 0) =
+    regressor(0, joint_idx * 10 + 0) =
         0.5 * (vl[0] * vl[0] + vl[1] * vl[1] + vl[2] * vl[2]);
-    regressor(joint_idx, 1) = -va[1] * vl[2] + va[2] * vl[1];
-    regressor(joint_idx, 2) = va[0] * vl[2] - va[2] * vl[0];
-    regressor(joint_idx, 3) = -va[0] * vl[1] + va[1] * vl[0];
-    regressor(joint_idx, 4) = 0.5 * va[0] * va[0];
-    regressor(joint_idx, 5) = va[0] * va[1];
-    regressor(joint_idx, 6) = 0.5 * va[1] * va[1];
-    regressor(joint_idx, 7) = va[0] * va[2];
-    regressor(joint_idx, 8) = va[1] * va[2];
-    regressor(joint_idx, 9) = 0.5 * va[2] * va[2];
+    regressor(0, joint_idx * 10 + 1) = -va[1] * vl[2] + va[2] * vl[1];
+    regressor(0, joint_idx * 10 + 2) = va[0] * vl[2] - va[2] * vl[0];
+    regressor(0, joint_idx * 10 + 3) = -va[0] * vl[1] + va[1] * vl[0];
+    regressor(0, joint_idx * 10 + 4) = 0.5 * va[0] * va[0];
+    regressor(0, joint_idx * 10 + 5) = va[0] * va[1];
+    regressor(0, joint_idx * 10 + 6) = 0.5 * va[1] * va[1];
+    regressor(0, joint_idx * 10 + 7) = va[0] * va[2];
+    regressor(0, joint_idx * 10 + 8) = va[1] * va[2];
+    regressor(0, joint_idx * 10 + 9) = 0.5 * va[2] * va[2];
   }
 
   casadi::Function KineticRegressor("kineticEnergyRegressor", {_q, _qdot},
@@ -471,7 +470,7 @@ casadi::Function CasadiKinDyn::Impl::potentialEnergyRegressor() {
   int n_bodies = _model_dbl.njoints - 1;
 
   // create a kinetic energy regressor of dimension [nv x 10]
-  auto regressor = casadi::SX::zeros(n_bodies, 10);
+  auto regressor = casadi::SX::zeros(1, n_bodies * 10);
 
   // get gravity vector. In pinocchio it is stored as (0, 0, -9.81)
   auto gT = (model.gravity.linear());
@@ -482,10 +481,10 @@ casadi::Function CasadiKinDyn::Impl::potentialEnergyRegressor() {
     auto R = (data.oMi[joint_idx + 1].rotation());
 
     auto res = R * gT;
-    regressor(joint_idx, 0) = gT.dot(r)(0);
-    regressor(joint_idx, 1) = res(0);
-    regressor(joint_idx, 2) = res(1);
-    regressor(joint_idx, 3) = res(2);
+    regressor(0, joint_idx * 10 + 0) = gT.dot(r)(0);
+    regressor(0, joint_idx * 10 + 1) = res(0);
+    regressor(0, joint_idx * 10 + 2) = res(1);
+    regressor(0, joint_idx * 10 + 3) = res(2);
   }
 
   casadi::Function PotentialRegressor("potentialEnergyRegressor", {_q},
