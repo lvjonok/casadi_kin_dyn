@@ -473,12 +473,12 @@ casadi::Function CasadiKinDyn::Impl::potentialEnergyRegressor() {
   auto regressor = casadi::SX::zeros(1, n_bodies * 10);
 
   // get gravity vector. In pinocchio it is stored as (0, 0, -9.81)
-  auto gT = (model.gravity.linear());
+  auto gT = -(model.gravity.linear());
 
   for (auto joint_idx = 0; joint_idx < n_bodies; joint_idx++) {
     // find position and rotation of body frame
     auto r = (data.oMi[joint_idx + 1].translation());
-    auto R = (data.oMi[joint_idx + 1].rotation());
+    auto R = (data.oMi[joint_idx + 1].rotation().transpose());
 
     auto res = R * gT;
     regressor(0, joint_idx * 10 + 0) = gT.dot(r)(0);
