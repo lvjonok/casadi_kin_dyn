@@ -12,12 +12,15 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest"]
-        arch: ["x86_64"]
+        arch: ["x86_64", "aarch64"]
         build:
           [
             "cp39-manylinux_x86_64",
             "cp310-manylinux_x86_64",
             "cp311-manylinux_x86_64",
+            "cp39-manylinux_aarch64",
+            "cp310-manylinux_aarch64",
+            "cp311-manylinux_aarch64",
           ]
     steps:
       - uses: actions/checkout@v3
@@ -30,6 +33,7 @@ jobs:
           CIBW_BUILD: ${{ matrix.build }}
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_MANYLINUX_X86_64_IMAGE: "dockcross/manylinux_2_28-x64"
+          CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux2014" # default value from cibw docs
           CIBW_REPAIR_WHEEL_COMMAND: ""
       - uses: actions/upload-artifact@v3
         with:
