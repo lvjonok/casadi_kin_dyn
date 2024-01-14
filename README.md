@@ -11,3 +11,7 @@ In comparison to the original [casadi_kin_dyn](https://github.com/ADVRHumanoids/
 - Added `torque`, `potentialEnergy`, `kineticEnergy` regressors
 - Added `jacobian time derivative` mapping
 - Added `jacobian of CoM` mapping
+
+# v1.6.7
+
+- Added ability to set `root_joint` to `FreeFlyer` joint

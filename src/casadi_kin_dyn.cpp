@@ -25,8 +25,8 @@ namespace casadi_kin_dyn {
 class CasadiKinDyn::Impl {
 
 public:
-  Impl(urdf::ModelInterfaceSharedPtr urdf_model, bool verbose,
-       std::map<std::string, double> fixed_joints);
+  Impl(urdf::ModelInterfaceSharedPtr urdf_model, std::string root_joint,
+       bool verbose, std::map<std::string, double> fixed_joints);
 
   int nq() const;
   int nv() const;
@@ -113,12 +113,26 @@ private:
   urdf::ModelInterfaceSharedPtr _urdf;
 };
 
-CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model, bool verbose,
+CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model,
+                         std::string root_name, bool verbose,
                          std::map<std::string, double> fixed_joints)
     : _urdf(urdf_model) {
   // parse pinocchio model from urdf
+  // check that length of root_joint is not 0
   pinocchio::Model model_full;
-  pinocchio::urdf::buildModel(urdf_model, model_full, verbose);
+  if (root_name.length() == 0) {
+    pinocchio::urdf::buildModel(urdf_model, model_full, verbose);
+  } else {
+    // parse joint somehow
+    pinocchio::JointModel root_joint;
+    if (root_name == "freeflyer") {
+      root_joint = pinocchio::JointModelFreeFlyer();
+    } else {
+      throw std::invalid_argument("root_joint must be 'freeflyer' (got '" +
+                                  root_name + "')");
+    }
+    pinocchio::urdf::buildModel(urdf_model, root_joint, model_full, verbose);
+  }
 
   // reduce model
   std::vector<pinocchio::JointIndex> joints_to_lock;
@@ -795,10 +809,11 @@ CasadiKinDyn::Impl::eigmat_to_cas(const CasadiKinDyn::Impl::MatrixXs &eig) {
   return sx;
 }
 
-CasadiKinDyn::CasadiKinDyn(std::string urdf_string, bool verbose,
+CasadiKinDyn::CasadiKinDyn(std::string urdf_string, std::string root_name,
+                           bool verbose,
                            std::map<std::string, double> fixed_joints) {
   auto urdf = urdf::parseURDF(urdf_string);
-  _impl = std::make_unique<Impl>(urdf, verbose, fixed_joints);
+  _impl = std::make_unique<Impl>(urdf, root_name, verbose, fixed_joints);
   _impl->urdf = urdf_string;
 }
 

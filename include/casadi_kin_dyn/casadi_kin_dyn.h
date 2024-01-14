@@ -26,7 +26,8 @@ public:
     LOCAL_WORLD_ALIGNED = 2 // This is classical in world frame
   };
 
-  CasadiKinDyn(std::string urdf_string, bool verbose = false,
+  CasadiKinDyn(std::string urdf_string, std::string root_name = std::string(),
+               bool verbose = false,
                std::map<std::string, double> fixed_joints =
                    std::map<std::string, double>{});
 
