@@ -15,3 +15,7 @@ In comparison to the original [casadi_kin_dyn](https://github.com/ADVRHumanoids/
 # v1.6.7
 
 - Added ability to set `root_joint` to `FreeFlyer` joint
+
+# v1.6.8
+
+- `root_joint` is now transformed to enum that can be freely extended with Pinocchio JointModel types.

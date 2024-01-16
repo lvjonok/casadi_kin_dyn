@@ -36,10 +36,10 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
   py::class_<CasadiKinDyn, CasadiKinDyn::Ptr> casadikindyn(m, "CasadiKinDyn");
 
   casadikindyn
-      .def(py::init<std::string, std::string, bool,
+      .def(py::init<std::string, CasadiKinDyn::JointType, bool,
                     std::map<std::string, double>>(),
-           py::arg("urdf"), py::arg("root_joint") = std::string(),
-           py::arg("verbose") = false, py::arg("fixed_joints") = py::dict())
+           py::arg("urdf"), py::arg("root_joint"), py::arg("verbose") = false,
+           py::arg("fixed_joints") = py::dict())
       .def(py::init<std::string>())
       .def("nq", &CasadiKinDyn::nq)
       .def("nv", &CasadiKinDyn::nv)
@@ -95,4 +95,9 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .value("LOCAL_WORLD_ALIGNED",
              CasadiKinDyn::ReferenceFrame::LOCAL_WORLD_ALIGNED)
       .export_values();
+
+  py::enum_<CasadiKinDyn::JointType>(casadikindyn, "JointType")
+      .value("OMIT", CasadiKinDyn::JointType::OMIT)
+      .value("FREE_FLYER", CasadiKinDyn::JointType::FREE_FLYER)
+      .value("PLANAR", CasadiKinDyn::JointType::PLANAR);
 }

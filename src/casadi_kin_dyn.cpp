@@ -25,7 +25,7 @@ namespace casadi_kin_dyn {
 class CasadiKinDyn::Impl {
 
 public:
-  Impl(urdf::ModelInterfaceSharedPtr urdf_model, std::string root_joint,
+  Impl(urdf::ModelInterfaceSharedPtr urdf_model, JointType root_joint,
        bool verbose, std::map<std::string, double> fixed_joints);
 
   int nq() const;
@@ -114,24 +114,30 @@ private:
 };
 
 CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model,
-                         std::string root_name, bool verbose,
+                         JointType root_joint, bool verbose,
                          std::map<std::string, double> fixed_joints)
     : _urdf(urdf_model) {
   // parse pinocchio model from urdf
   // check that length of root_joint is not 0
   pinocchio::Model model_full;
-  if (root_name.length() == 0) {
+  if (root_joint == JointType::OMIT) {
     pinocchio::urdf::buildModel(urdf_model, model_full, verbose);
   } else {
     // parse joint somehow
-    pinocchio::JointModel root_joint;
-    if (root_name == "freeflyer") {
-      root_joint = pinocchio::JointModelFreeFlyer();
-    } else {
-      throw std::invalid_argument("root_joint must be 'freeflyer' (got '" +
-                                  root_name + "')");
+    pinocchio::JointModel pin_joint;
+
+    switch (root_joint) {
+    case JointType::FREE_FLYER:
+      pin_joint = pinocchio::JointModelFreeFlyer();
+      break;
+    case JointType::PLANAR:
+      pin_joint = pinocchio::JointModelPlanar();
+      break;
+    default:
+      throw std::invalid_argument("this root_joint is not implemented");
     }
-    pinocchio::urdf::buildModel(urdf_model, root_joint, model_full, verbose);
+
+    pinocchio::urdf::buildModel(urdf_model, pin_joint, model_full, verbose);
   }
 
   // reduce model
@@ -809,11 +815,11 @@ CasadiKinDyn::Impl::eigmat_to_cas(const CasadiKinDyn::Impl::MatrixXs &eig) {
   return sx;
 }
 
-CasadiKinDyn::CasadiKinDyn(std::string urdf_string, std::string root_name,
+CasadiKinDyn::CasadiKinDyn(std::string urdf_string, JointType root_joint,
                            bool verbose,
                            std::map<std::string, double> fixed_joints) {
   auto urdf = urdf::parseURDF(urdf_string);
-  _impl = std::make_unique<Impl>(urdf, root_name, verbose, fixed_joints);
+  _impl = std::make_unique<Impl>(urdf, root_joint, verbose, fixed_joints);
   _impl->urdf = urdf_string;
 }
 

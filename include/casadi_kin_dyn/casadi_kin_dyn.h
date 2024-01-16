@@ -26,7 +26,14 @@ public:
     LOCAL_WORLD_ALIGNED = 2 // This is classical in world frame
   };
 
-  CasadiKinDyn(std::string urdf_string, std::string root_name = std::string(),
+  enum JointType {
+    OMIT = 0, // Do not specify directly the joint
+    FREE_FLYER = 1,
+    PLANAR = 2,
+    // TODO: other types from Pinocchio can be added here
+  };
+
+  CasadiKinDyn(std::string urdf_string, JointType root_joint = JointType::OMIT,
                bool verbose = false,
                std::map<std::string, double> fixed_joints =
                    std::map<std::string, double>{});
