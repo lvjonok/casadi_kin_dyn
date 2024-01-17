@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <Eigen/Dense>
@@ -19,6 +20,9 @@ class CasadiKinDyn {
 
 public:
   typedef std::shared_ptr<CasadiKinDyn> Ptr;
+
+  typedef std::map<std::string, std::variant<std::vector<double>, double>>
+      MapJointConfiguration;
 
   enum ReferenceFrame {
     WORLD = 0,              // This is spatial in world frame
@@ -35,8 +39,7 @@ public:
 
   CasadiKinDyn(std::string urdf_string, JointType root_joint = JointType::OMIT,
                bool verbose = false,
-               std::map<std::string, double> fixed_joints =
-                   std::map<std::string, double>{});
+               MapJointConfiguration fixed_joints = MapJointConfiguration{});
 
   CasadiKinDyn(const CasadiKinDyn &other);
 

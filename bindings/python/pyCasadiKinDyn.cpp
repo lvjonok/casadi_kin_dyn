@@ -37,7 +37,7 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
 
   casadikindyn
       .def(py::init<std::string, CasadiKinDyn::JointType, bool,
-                    std::map<std::string, double>>(),
+                    CasadiKinDyn::MapJointConfiguration>(),
            py::arg("urdf"), py::arg("root_joint"), py::arg("verbose") = false,
            py::arg("fixed_joints") = py::dict())
       .def(py::init<std::string>())

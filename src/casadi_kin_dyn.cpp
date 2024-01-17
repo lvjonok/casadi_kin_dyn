@@ -26,7 +26,7 @@ class CasadiKinDyn::Impl {
 
 public:
   Impl(urdf::ModelInterfaceSharedPtr urdf_model, JointType root_joint,
-       bool verbose, std::map<std::string, double> fixed_joints);
+       bool verbose, MapJointConfiguration fixed_joints);
 
   int nq() const;
   int nv() const;
@@ -115,7 +115,7 @@ private:
 
 CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model,
                          JointType root_joint, bool verbose,
-                         std::map<std::string, double> fixed_joints)
+                         MapJointConfiguration fixed_joints)
     : _urdf(urdf_model) {
   // parse pinocchio model from urdf
   // check that length of root_joint is not 0
@@ -152,13 +152,46 @@ CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model,
     size_t jidx = model_full.getJointId(jname);
     size_t qidx = model_full.idx_qs[jidx];
     size_t nq = model_full.nqs[jidx];
-    if (nq != 1) {
-      throw std::invalid_argument("only 1-dof fixed joints are supported (" +
-                                  jname + ")");
-    }
-
     joints_to_lock.push_back(jidx);
-    joint_pos[qidx] = jpos;
+
+    if (nq == 1) {
+      // we fix simple 1-dof joint
+
+      // check that we get a double
+      double double_pos;
+      if (std::holds_alternative<double>(jpos)) {
+        double_pos = std::get<double>(jpos);
+      } else {
+        throw std::invalid_argument(
+            "configuration of 1-dof joint requires just double");
+      }
+
+      joint_pos[qidx] = double_pos;
+    } else if (nq == 7) {
+      // fix floating base joint
+
+      std::vector<double> floating_body_pos;
+
+      // check that we get vector of doubles
+      if (std::holds_alternative<std::vector<double>>(jpos)) {
+        floating_body_pos = std::get<std::vector<double>>(jpos);
+      } else {
+        throw std::invalid_argument(
+            "configuration of floating joint should be expressed with 7 "
+            "values. (x, y, z, qvx, qvy, qvz, qs)");
+      }
+
+      // check that vector is composed of 7 items
+      if (floating_body_pos.size() != 7) {
+        throw std::invalid_argument(
+            "configuration of floating joint should be expressed with 7 "
+            "values. (x, y, z, qvx, qvy, qvz, qs)");
+      }
+
+      for (auto i = 0; i < 7; i++) {
+        joint_pos[i] = floating_body_pos[i];
+      }
+    }
   }
 
   pinocchio::buildReducedModel(model_full, joints_to_lock, joint_pos,
@@ -816,8 +849,7 @@ CasadiKinDyn::Impl::eigmat_to_cas(const CasadiKinDyn::Impl::MatrixXs &eig) {
 }
 
 CasadiKinDyn::CasadiKinDyn(std::string urdf_string, JointType root_joint,
-                           bool verbose,
-                           std::map<std::string, double> fixed_joints) {
+                           bool verbose, MapJointConfiguration fixed_joints) {
   auto urdf = urdf::parseURDF(urdf_string);
   _impl = std::make_unique<Impl>(urdf, root_joint, verbose, fixed_joints);
   _impl->urdf = urdf_string;
