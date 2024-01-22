@@ -3,6 +3,7 @@
 #include <casadi/casadi.hpp>
 
 #define PINOCCHIO_URDFDOM_TYPEDEF_SHARED_PTR
+#include "pinocchio/algorithm/centroidal-derivatives.hpp"
 #include <pinocchio/algorithm/aba.hpp>
 #include <pinocchio/algorithm/centroidal.hpp>
 #include <pinocchio/algorithm/contact-dynamics.hpp>
@@ -52,6 +53,8 @@ public:
   casadi::Function rnea();
 
   casadi::Function computeCentroidalDynamics();
+
+  casadi::Function computeCentroidalDynamicsDerivatives();
 
   casadi::Function ccrba();
 
@@ -626,9 +629,37 @@ casadi::Function CasadiKinDyn::Impl::computeCentroidalDynamics() {
   auto h_ang = eig_to_cas(data.hg.angular());
   auto dh_lin = eig_to_cas(data.dhg.linear());
   auto dh_ang = eig_to_cas(data.dhg.angular());
+  auto Ag = eigmat_to_cas(data.Ag);
   casadi::Function CD("computeCentroidalDynamics", {_q, _qdot, _qddot},
-                      {h_lin, h_ang, dh_lin, dh_ang}, {"q", "v", "a"},
-                      {"h_lin", "h_ang", "dh_lin", "dh_ang"});
+                      {h_lin, h_ang, dh_lin, dh_ang, Ag}, {"q", "v", "a"},
+                      {"h_lin", "h_ang", "dh_lin", "dh_ang", "Ag"});
+
+  return CD;
+}
+
+casadi::Function CasadiKinDyn::Impl::computeCentroidalDynamicsDerivatives() {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  Eigen::Matrix<Scalar, 6, -1> dh_dq, dhdot_dq, dhdot_dv, dhdot_da;
+  dh_dq.setZero(6, nv());
+  dhdot_dq.setZero(6, nv());
+  dhdot_dv.setZero(6, nv());
+  dhdot_da.setZero(6, nv());
+
+  pinocchio::computeCentroidalDynamicsDerivatives(
+      model, data, cas_to_eig(_q), cas_to_eig(_qdot), cas_to_eig(_qddot), dh_dq,
+      dhdot_dq, dhdot_dv, dhdot_da);
+
+  auto dh_dq_cas = eigmat_to_cas(dh_dq);
+  auto dhdot_dq_cas = eigmat_to_cas(dhdot_dq);
+  auto dhdot_dv_cas = eigmat_to_cas(dhdot_dv);
+  auto dhdot_da_cas = eigmat_to_cas(dhdot_da);
+
+  casadi::Function CD(
+      "computeCentroidalDynamicsDerivatives", {_q, _qdot, _qddot},
+      {dh_dq_cas, dhdot_dq_cas, dhdot_dv_cas, dhdot_da_cas}, {"q", "v", "a"},
+      {"dh_dq", "dhdot_dq", "dhdot_dv", "dhdot_da"});
 
   return CD;
 }
@@ -901,6 +932,10 @@ casadi::Function CasadiKinDyn::rnea() { return impl().rnea(); }
 
 casadi::Function CasadiKinDyn::computeCentroidalDynamics() {
   return impl().computeCentroidalDynamics();
+}
+
+casadi::Function CasadiKinDyn::computeCentroidalDynamicsDerivatives() {
+  return impl().computeCentroidalDynamicsDerivatives();
 }
 
 casadi::Function CasadiKinDyn::ccrba() { return impl().ccrba(); }

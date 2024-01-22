@@ -62,6 +62,9 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .def("ccrba", make_deserialized(&CasadiKinDyn::ccrba))
       .def("computeCentroidalDynamics",
            make_deserialized(&CasadiKinDyn::computeCentroidalDynamics))
+      .def("computeCentroidalDynamicsDerivatives",
+           make_deserialized(
+               &CasadiKinDyn::computeCentroidalDynamicsDerivatives))
       .def("fk",
            make_deserialized<CasadiKinDyn, std::string>(&CasadiKinDyn::fk))
       .def("centerOfMass", make_deserialized(&CasadiKinDyn::centerOfMass))

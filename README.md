@@ -33,3 +33,7 @@ kindyn = cas_kin_dyn.CasadiKinDyn(
     fixed_joints={"floating_base_joint": np.array([0, 0, 0, 0, 0, 0, 1])},
 )
 ```
+
+# v1.6.10
+
+- Derivatives of centroidal dynamics are exposed from `pinocchio::computeCentroidalDynamicsDerivatives`

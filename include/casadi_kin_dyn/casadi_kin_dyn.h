@@ -71,6 +71,8 @@ public:
 
   casadi::Function computeCentroidalDynamics();
 
+  casadi::Function computeCentroidalDynamicsDerivatives();
+
   casadi::Function ccrba();
 
   casadi::Function crba();
