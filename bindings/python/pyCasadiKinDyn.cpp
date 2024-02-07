@@ -1,7 +1,9 @@
 #include <casadi/casadi.hpp>
 #include <casadi_kin_dyn/casadi_kin_dyn.h>
+#include <casadi_kin_dyn/collision_handler.h>
 
 #include <pybind11/detail/common.h>
+#include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -103,4 +105,19 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .value("OMIT", CasadiKinDyn::JointType::OMIT)
       .value("FREE_FLYER", CasadiKinDyn::JointType::FREE_FLYER)
       .value("PLANAR", CasadiKinDyn::JointType::PLANAR);
+
+  // collision handler
+  py::class_<CasadiCollisionHandler, CasadiCollisionHandler::Ptr>
+      collisionhandler(m, "CollisionHandler");
+
+  collisionhandler.def(py::init<CasadiKinDyn::Ptr>(), py::arg("ckd"))
+      .def("numPairs", &CasadiCollisionHandler::numPairs)
+      .def("distance",
+           [](CasadiCollisionHandler &ch, Eigen::Ref<Eigen::VectorXd> q,
+              Eigen::Ref<Eigen::VectorXd> d) { return ch.distance(q, d); })
+      .def("jacobian",
+           [](CasadiCollisionHandler &ch, Eigen::Ref<Eigen::VectorXd> q_array,
+              Eigen::Ref<Eigen::MatrixXd> J_array) {
+             return ch.distanceJacobian(q_array, J_array);
+           });
 }

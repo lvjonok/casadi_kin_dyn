@@ -37,3 +37,7 @@ kindyn = cas_kin_dyn.CasadiKinDyn(
 # v1.6.10
 
 - Derivatives of centroidal dynamics are exposed from `pinocchio::computeCentroidalDynamicsDerivatives`
+
+# 1.6.11
+
+- Added collision handler which binds `distance` and `jacobian` functions with the use of [hpp-fcl](https://github.com/humanoid-path-planner/hpp-fcl) library.

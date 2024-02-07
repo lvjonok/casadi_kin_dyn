@@ -52,6 +52,8 @@ if(NOT pybind11_FOUND)
   FetchContent_MakeAvailable("pybind11")
 endif()
 
+add_definitions(-w)
+
 # Check requirements
 find_package(Eigen3 REQUIRED)
 find_package(casadi REQUIRED)
@@ -71,9 +73,9 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
 )
 
-set(${PROJECT_NAME}_HEADERS include/${HEADER_DIR}/casadi_kin_dyn.h)
+set(${PROJECT_NAME}_HEADERS include/${HEADER_DIR}/casadi_kin_dyn.h include/${HEADER_DIR}/collision_handler.h)
 
-set(${PROJECT_NAME}_SOURCES src/casadi_kin_dyn.cpp)
+set(${PROJECT_NAME}_SOURCES src/casadi_kin_dyn.cpp src/collision_handler.cpp)
 
 add_library(
   ${PROJECT_NAME} 
