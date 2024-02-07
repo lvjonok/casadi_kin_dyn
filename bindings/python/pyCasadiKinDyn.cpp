@@ -113,10 +113,10 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
   collisionhandler.def(py::init<CasadiKinDyn::Ptr>(), py::arg("ckd"))
       .def("numPairs", &CasadiCollisionHandler::numPairs)
       .def("distance",
-           [](CasadiCollisionHandler &ch, Eigen::Ref<Eigen::VectorXd> q,
+           [](CasadiCollisionHandler &ch, Eigen::Ref<const Eigen::VectorXd> q,
               Eigen::Ref<Eigen::VectorXd> d) { return ch.distance(q, d); })
       .def("jacobian",
-           [](CasadiCollisionHandler &ch, Eigen::Ref<Eigen::VectorXd> q_array,
+           [](CasadiCollisionHandler &ch, Eigen::Ref<const Eigen::VectorXd> q_array,
               Eigen::Ref<Eigen::MatrixXd> J_array) {
              return ch.distanceJacobian(q_array, J_array);
            });

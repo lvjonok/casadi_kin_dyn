@@ -17,6 +17,9 @@ public:
 
   size_t numPairs() const;
 
+  bool distance(Eigen::Ref<const Eigen::VectorXd> q,
+                Eigen::Ref<Eigen::VectorXd> d);
+
   bool distanceJacobian(Eigen::Ref<const Eigen::VectorXd> q,
                         Eigen::Ref<Eigen::MatrixXd> J);
 

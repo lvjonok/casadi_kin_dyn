@@ -101,8 +101,6 @@ public:
 
   std::string urdf;
 
-  casadi::SX q();
-
 private:
   typedef casadi::SX Scalar;
   typedef Eigen::Matrix<Scalar, -1, 1> VectorXs;
@@ -117,10 +115,6 @@ private:
   std::vector<double> _q_min, _q_max;
   urdf::ModelInterfaceSharedPtr _urdf;
 };
-
-casadi::SX CasadiKinDyn::Impl::q() { return _q; }
-
-casadi::SX CasadiKinDyn::q() { return impl().q(); }
 
 CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model,
                          JointType root_joint, bool verbose,
