@@ -115,9 +115,9 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .def("distance",
            [](CasadiCollisionHandler &ch, Eigen::Ref<const Eigen::VectorXd> q,
               Eigen::Ref<Eigen::VectorXd> d) { return ch.distance(q, d); })
-      .def("jacobian",
-           [](CasadiCollisionHandler &ch, Eigen::Ref<const Eigen::VectorXd> q_array,
-              Eigen::Ref<Eigen::MatrixXd> J_array) {
-             return ch.distanceJacobian(q_array, J_array);
-           });
+      .def("jacobian", [](CasadiCollisionHandler &ch,
+                          Eigen::Ref<const Eigen::VectorXd> q_array,
+                          Eigen::Ref<Eigen::MatrixXd> J_array) {
+        return ch.distanceJacobian(q_array, J_array);
+      });
 }

@@ -1,6 +1,6 @@
 [project]
 name = "cmeel_casadi_kin_dyn"
-version = "1.6.11"
+version = "1.6.12"
 description = "Cmeel distribution of a package for generation of symbolic (casadi::SX) expressions of robot kinematics and dynamics. Based on URDF and Pinocchio."
 readme = "README.md"
 requires-python = ">= 3.9"

@@ -11,6 +11,7 @@
 #include <pinocchio/parsers/urdf.hpp>
 
 #include <casadi/casadi.hpp>
+#include <iostream>
 
 namespace pin = pinocchio;
 
@@ -155,6 +156,8 @@ bool CasadiCollisionHandler::Impl::distanceJacobian(
   Eigen::VectorXd Jrow_v(_mdl.nv);
   Eigen::VectorXd Jrow_q(_mdl.nq);
 
+  // std::cerr << __func__ << ": wrong input size \n";
+
   for (size_t k = 0; k < _geom_mdl.collisionPairs.size(); ++k) {
     const auto &cp = _geom_mdl.collisionPairs[k];
     const auto &dr = _geom_data.distanceResults[k];
@@ -178,8 +181,22 @@ bool CasadiCollisionHandler::Impl::distanceJacobian(
       // translation
       Eigen::Vector3d r = w1 - _data.oMi[joint_1_id].translation();
 
-      Jrow_v = -dr.normal.transpose() * J_1.topRows<3>();
-      Jrow_v -= (r.cross(dr.normal)).transpose() * J_1.bottomRows<3>();
+      Eigen::Vector3d n = dr.normal;
+
+      // std::cerr << "n = " << n.transpose() << " w1 ="
+      //           << dr.nearest_points[0].transpose() << " w2 ="
+      //           << dr.nearest_points[1].transpose() << "\n";
+      // if (!J.allFinite() || n.hasNaN())
+      // {
+      //   // find normal as the direction from w1 to w2
+      //   n = dr.nearest_points[1] - dr.nearest_points[0];
+      //   n.normalize();
+      //   std::cerr << "changed to n = " << n.transpose() << "\n";
+      //   return false;
+      // }
+
+      Jrow_v = -n.transpose() * J_1.topRows<3>();
+      Jrow_v -= (r.cross(n)).transpose() * J_1.bottomRows<3>();
     } else {
       Jrow_v.setZero(_mdl.nv);
     }
@@ -194,36 +211,49 @@ bool CasadiCollisionHandler::Impl::distanceJacobian(
       // translation
       Eigen::Vector3d r = w2 - _data.oMi[joint_2_id].translation();
 
-      Jrow_v += dr.normal.transpose() * J_2.topRows<3>();
-      Jrow_v += (r.cross(dr.normal)).transpose() * J_2.bottomRows<3>();
+      Eigen::Vector3d n = dr.normal;
+
+      // std::cerr << "n = " << n.transpose() << "w1"
+      //           << dr.nearest_points[0].transpose() << "w2"
+      //           << dr.nearest_points[1].transpose() << "\n";
+      // if (!J.allFinite() || n.hasNaN())
+      // {
+      //   // find normal as the direction from w1 to w2
+      //   n = dr.nearest_points[1] - dr.nearest_points[0];
+      //   n.normalize();
+      //   std::cerr << "changed to n = " << n.transpose() << "\n";
+      //   return false;
+      // }
+
+      Jrow_v += n.transpose() * J_2.topRows<3>();
+      Jrow_v += (r.cross(n)).transpose() * J_2.bottomRows<3>();
     }
 
-    kd->qdot(q, Jrow_v, Jrow_q);
-    J.row(k) = Jrow_q;
+    // kd->qdot(q, Jrow_v, Jrow_q);
+    J.row(k) = Jrow_v;
   }
 
   // auto toc = std::chrono::high_resolution_clock::now();
 
   // auto dur_sec = std::chrono::duration<double>(toc - tic);
 
-  return J.allFinite() && !J.hasNaN();
+  if (!J.allFinite() || J.hasNaN()) {
+    std::cerr << "bad values in distance jacobian: \n";
 
-  // {
-  //     std::cout << "bad values in distance jacobian: \n";
-  //
-  //     std::cout << "q = " << q.transpose().format(3) << "\n";
-  //
-  //     for (size_t k = 0; k < _geom_mdl.collisionPairs.size(); ++k)
-  //     {
-  //         if (!J.row(k).allFinite() || J.row(k).hasNaN())
-  //         {
-  //             std::cout << "at row " << k << ": " << J.row(k).format(3) <<
-  //             "\n";
-  //         }
-  //     }
-  // }
-  //
-  // return true;
+    std::cerr << "q = " << q.transpose().format(3) << "\n";
+
+    for (size_t k = 0; k < _geom_mdl.collisionPairs.size(); ++k) {
+      if (!J.row(k).allFinite() || J.row(k).hasNaN()) {
+        std::cerr << "at row " << k << ": " << J.row(k).format(3) << "\n";
+      }
+    }
+
+    return false;
+  }
+
+  return true;
+
+  // return J.allFinite() && !J.hasNaN();
 }
 
 CasadiCollisionHandler::Impl::~Impl() {}
