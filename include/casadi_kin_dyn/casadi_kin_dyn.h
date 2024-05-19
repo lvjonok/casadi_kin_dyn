@@ -94,6 +94,9 @@ public:
 
   casadi::Function frameAcceleration(std::string link_name, ReferenceFrame ref);
 
+  casadi::Function jointVelocityDerivatives(std::string link_name,
+                                            ReferenceFrame ref);
+
   casadi::Function kineticEnergy();
 
   casadi::Function potentialEnergy();

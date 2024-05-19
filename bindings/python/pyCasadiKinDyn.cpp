@@ -82,6 +82,9 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .def("frameAcceleration",
            make_deserialized<CasadiKinDyn, std::string, Ref>(
                &CasadiKinDyn::frameAcceleration))
+      .def("jointVelocityDerivatives",
+           make_deserialized<CasadiKinDyn, std::string>(
+               &CasadiKinDyn::jointVelocityDerivatives))
       .def("kineticEnergy", make_deserialized(&CasadiKinDyn::kineticEnergy))
       .def("potentialEnergy", make_deserialized(&CasadiKinDyn::potentialEnergy))
       .def("jointTorqueRegressor",

@@ -4,6 +4,7 @@
 
 #define PINOCCHIO_URDFDOM_TYPEDEF_SHARED_PTR
 #include "pinocchio/algorithm/centroidal-derivatives.hpp"
+#include "pinocchio/algorithm/kinematics-derivatives.hpp"
 #include <pinocchio/algorithm/aba.hpp>
 #include <pinocchio/algorithm/centroidal.hpp>
 #include <pinocchio/algorithm/contact-dynamics.hpp>
@@ -72,6 +73,9 @@ public:
   casadi::Function frameVelocity(std::string link_name, ReferenceFrame ref);
 
   casadi::Function frameAcceleration(std::string link_name, ReferenceFrame ref);
+
+  casadi::Function jointVelocityDerivatives(std::string link_name,
+                                            ReferenceFrame ref);
 
   casadi::Function crba();
 
@@ -741,6 +745,38 @@ casadi::Function CasadiKinDyn::Impl::frameAcceleration(std::string link_name,
   return FRAME_ACCEL;
 }
 
+casadi::Function
+CasadiKinDyn::Impl::jointVelocityDerivatives(std::string link_name,
+                                             ReferenceFrame ref) {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  auto frame_idx = model.getFrameId(link_name);
+
+  // Compute expression
+  Eigen::Matrix<Scalar, 6, -1> partial_dq, partial_dv;
+  partial_dq.setZero(6, nv());
+  partial_dv.setZero(6, nv());
+
+  pinocchio::computeForwardKinematicsDerivatives(
+      model, data, cas_to_eig(_q), cas_to_eig(_qdot), cas_to_eig(_qddot));
+
+  auto joint_id = model.frames[frame_idx].parent;
+
+  pinocchio::getJointVelocityDerivatives(model, data, joint_id,
+                                         pinocchio::ReferenceFrame(ref),
+                                         partial_dq, partial_dv);
+
+  auto v_partial_dq_cas = eigmat_to_cas(partial_dq);
+  auto v_partial_dv_cas = eigmat_to_cas(partial_dv);
+
+  casadi::Function JVD("jointVelocityDerivatives", {_q, _qdot},
+                       {v_partial_dq_cas, v_partial_dv_cas}, {"q", "v"},
+                       {"v_partial_dq", "v_partial_dv"});
+
+  return JVD;
+}
+
 casadi::Function CasadiKinDyn::Impl::fk(std::string link_name) {
   auto model = _model_dbl.cast<Scalar>();
   pinocchio::DataTpl<Scalar> data(model);
@@ -956,6 +992,11 @@ casadi::Function CasadiKinDyn::frameVelocity(std::string link_name,
 casadi::Function CasadiKinDyn::frameAcceleration(std::string link_name,
                                                  ReferenceFrame ref) {
   return impl().frameAcceleration(link_name, ref);
+}
+
+casadi::Function CasadiKinDyn::jointVelocityDerivatives(std::string link_name,
+                                                        ReferenceFrame ref) {
+  return impl().jointVelocityDerivatives(link_name, ref);
 }
 
 casadi::Function CasadiKinDyn::centerOfMass() { return impl().centerOfMass(); }
