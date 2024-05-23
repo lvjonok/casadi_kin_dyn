@@ -28,7 +28,7 @@ jobs:
         run: python3 -m pip install cibuildwheel
       - run: cibuildwheel --output-dir wh
         env:
-          CIBW_BUILD: ${{ matrix.python }}
+          CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_SKIP: "pp* *-musllinux_*"
           CIBW_BUILD_VERBOSITY: 2
