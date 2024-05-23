@@ -4,30 +4,34 @@ on: push
 
 jobs:
   build:
-    name: "${{ matrix.build }} ${{ matrix.os }} ${{ matrix.arch }}"
+    name: "${{ matrix.python }} ${{ matrix.os }}"
     runs-on: "${{ matrix.os }}"
     strategy:
+      fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
-        arch: ["x86_64"]
-        build:
-          [
-            "cp39-manylinux_x86_64",
-            "cp310-manylinux_x86_64",
-            "cp311-manylinux_x86_64",
-          ]
+        os: [ubuntu-latest]
+        python: [cp39, cp310, cp311]
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: "true"
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
       - name: Install build dependencies
         run: python3 -m pip install cibuildwheel
       - run: cibuildwheel --output-dir wh
         env:
-          CIBW_BUILD: ${{ matrix.build }}
-          CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_MANYLINUX_X86_64_IMAGE: "dockcross/manylinux_2_28-x64"
-          CIBW_REPAIR_WHEEL_COMMAND: ""
+          CIBW_BUILD: ${{ matrix.python }}
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_SKIP: "pp* *-musllinux_*"
+          CIBW_BUILD_VERBOSITY: 2
       - uses: actions/upload-artifact@v3
         with:
           path: wh
