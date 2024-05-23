@@ -2,9 +2,8 @@ name: Release on GitHub & PyPI
 
 on:
   push:
-    tags:
-      - "v*"
-
+    branches:
+      - master
 jobs:
   build:
     name: "${{ matrix.build }} ${{ matrix.os }} ${{ matrix.arch }}"
