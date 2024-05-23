@@ -1,9 +1,7 @@
 name: Release on GitHub & PyPI
 
-on:
-  push:
-    branches:
-      - master
+on: push
+
 jobs:
   build:
     name: "${{ matrix.build }} ${{ matrix.os }} ${{ matrix.arch }}"
@@ -11,12 +9,12 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-latest"]
-        arch: ["x86_64", "aarch64"]
+        arch: ["x86_64"]
         build:
           [
-            "cp39-*",
-            "cp310-*",
-            "cp311-*",
+            "cp39-manylinux_x86_64",
+            "cp310-manylinux_x86_64",
+            "cp311-manylinux_x86_64",
           ]
     steps:
       - uses: actions/checkout@v3
@@ -28,8 +26,7 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.build }}
           CIBW_ARCHS: ${{ matrix.arch }}
-          # CIBW_MANYLINUX_X86_64_IMAGE: "dockcross/manylinux_2_28-x64"
-          # CIBW_MANYLINUX_AARCH64_IMAGE: "dockcross/linux-arm64" # default value from cibw docs
+          CIBW_MANYLINUX_X86_64_IMAGE: "dockcross/manylinux_2_28-x64"
           CIBW_REPAIR_WHEEL_COMMAND: ""
       - uses: actions/upload-artifact@v3
         with:
