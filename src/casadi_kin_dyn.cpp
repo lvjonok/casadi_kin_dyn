@@ -3,6 +3,8 @@
 #include <casadi/casadi.hpp>
 
 #define PINOCCHIO_URDFDOM_TYPEDEF_SHARED_PTR
+#include "pinocchio/algorithm/centroidal-derivatives.hpp"
+#include "pinocchio/algorithm/kinematics-derivatives.hpp"
 #include <pinocchio/algorithm/aba.hpp>
 #include <pinocchio/algorithm/centroidal.hpp>
 #include <pinocchio/algorithm/contact-dynamics.hpp>
@@ -25,8 +27,8 @@ namespace casadi_kin_dyn {
 class CasadiKinDyn::Impl {
 
 public:
-  Impl(urdf::ModelInterfaceSharedPtr urdf_model, std::string root_joint,
-       bool verbose, std::map<std::string, double> fixed_joints);
+  Impl(urdf::ModelInterfaceSharedPtr urdf_model, JointType root_joint,
+       bool verbose, MapJointConfiguration fixed_joints);
 
   int nq() const;
   int nv() const;
@@ -53,6 +55,8 @@ public:
 
   casadi::Function computeCentroidalDynamics();
 
+  casadi::Function computeCentroidalDynamicsDerivatives();
+
   casadi::Function ccrba();
 
   casadi::Function fk(std::string link_name);
@@ -69,6 +73,9 @@ public:
   casadi::Function frameVelocity(std::string link_name, ReferenceFrame ref);
 
   casadi::Function frameAcceleration(std::string link_name, ReferenceFrame ref);
+
+  casadi::Function jointVelocityDerivatives(std::string link_name,
+                                            ReferenceFrame ref);
 
   casadi::Function crba();
 
@@ -114,24 +121,30 @@ private:
 };
 
 CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model,
-                         std::string root_name, bool verbose,
-                         std::map<std::string, double> fixed_joints)
+                         JointType root_joint, bool verbose,
+                         MapJointConfiguration fixed_joints)
     : _urdf(urdf_model) {
   // parse pinocchio model from urdf
   // check that length of root_joint is not 0
   pinocchio::Model model_full;
-  if (root_name.length() == 0) {
+  if (root_joint == JointType::OMIT) {
     pinocchio::urdf::buildModel(urdf_model, model_full, verbose);
   } else {
     // parse joint somehow
-    pinocchio::JointModel root_joint;
-    if (root_name == "freeflyer") {
-      root_joint = pinocchio::JointModelFreeFlyer();
-    } else {
-      throw std::invalid_argument("root_joint must be 'freeflyer' (got '" +
-                                  root_name + "')");
+    pinocchio::JointModel pin_joint;
+
+    switch (root_joint) {
+    case JointType::FREE_FLYER:
+      pin_joint = pinocchio::JointModelFreeFlyer();
+      break;
+    case JointType::PLANAR:
+      pin_joint = pinocchio::JointModelPlanar();
+      break;
+    default:
+      throw std::invalid_argument("this root_joint is not implemented");
     }
-    pinocchio::urdf::buildModel(urdf_model, root_joint, model_full, verbose);
+
+    pinocchio::urdf::buildModel(urdf_model, pin_joint, model_full, verbose);
   }
 
   // reduce model
@@ -146,13 +159,46 @@ CasadiKinDyn::Impl::Impl(urdf::ModelInterfaceSharedPtr urdf_model,
     size_t jidx = model_full.getJointId(jname);
     size_t qidx = model_full.idx_qs[jidx];
     size_t nq = model_full.nqs[jidx];
-    if (nq != 1) {
-      throw std::invalid_argument("only 1-dof fixed joints are supported (" +
-                                  jname + ")");
-    }
-
     joints_to_lock.push_back(jidx);
-    joint_pos[qidx] = jpos;
+
+    if (nq == 1) {
+      // we fix simple 1-dof joint
+
+      // check that we get a double
+      double double_pos;
+      if (std::holds_alternative<double>(jpos)) {
+        double_pos = std::get<double>(jpos);
+      } else {
+        throw std::invalid_argument(
+            "configuration of 1-dof joint requires just double");
+      }
+
+      joint_pos[qidx] = double_pos;
+    } else if (nq == 7) {
+      // fix floating base joint
+
+      std::vector<double> floating_body_pos;
+
+      // check that we get vector of doubles
+      if (std::holds_alternative<std::vector<double>>(jpos)) {
+        floating_body_pos = std::get<std::vector<double>>(jpos);
+      } else {
+        throw std::invalid_argument(
+            "configuration of floating joint should be expressed with 7 "
+            "values. (x, y, z, qvx, qvy, qvz, qs)");
+      }
+
+      // check that vector is composed of 7 items
+      if (floating_body_pos.size() != 7) {
+        throw std::invalid_argument(
+            "configuration of floating joint should be expressed with 7 "
+            "values. (x, y, z, qvx, qvy, qvz, qs)");
+      }
+
+      for (auto i = 0; i < 7; i++) {
+        joint_pos[i] = floating_body_pos[i];
+      }
+    }
   }
 
   pinocchio::buildReducedModel(model_full, joints_to_lock, joint_pos,
@@ -587,9 +633,37 @@ casadi::Function CasadiKinDyn::Impl::computeCentroidalDynamics() {
   auto h_ang = eig_to_cas(data.hg.angular());
   auto dh_lin = eig_to_cas(data.dhg.linear());
   auto dh_ang = eig_to_cas(data.dhg.angular());
+  auto Ag = eigmat_to_cas(data.Ag);
   casadi::Function CD("computeCentroidalDynamics", {_q, _qdot, _qddot},
-                      {h_lin, h_ang, dh_lin, dh_ang}, {"q", "v", "a"},
-                      {"h_lin", "h_ang", "dh_lin", "dh_ang"});
+                      {h_lin, h_ang, dh_lin, dh_ang, Ag}, {"q", "v", "a"},
+                      {"h_lin", "h_ang", "dh_lin", "dh_ang", "Ag"});
+
+  return CD;
+}
+
+casadi::Function CasadiKinDyn::Impl::computeCentroidalDynamicsDerivatives() {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  Eigen::Matrix<Scalar, 6, -1> dh_dq, dhdot_dq, dhdot_dv, dhdot_da;
+  dh_dq.setZero(6, nv());
+  dhdot_dq.setZero(6, nv());
+  dhdot_dv.setZero(6, nv());
+  dhdot_da.setZero(6, nv());
+
+  pinocchio::computeCentroidalDynamicsDerivatives(
+      model, data, cas_to_eig(_q), cas_to_eig(_qdot), cas_to_eig(_qddot), dh_dq,
+      dhdot_dq, dhdot_dv, dhdot_da);
+
+  auto dh_dq_cas = eigmat_to_cas(dh_dq);
+  auto dhdot_dq_cas = eigmat_to_cas(dhdot_dq);
+  auto dhdot_dv_cas = eigmat_to_cas(dhdot_dv);
+  auto dhdot_da_cas = eigmat_to_cas(dhdot_da);
+
+  casadi::Function CD(
+      "computeCentroidalDynamicsDerivatives", {_q, _qdot, _qddot},
+      {dh_dq_cas, dhdot_dq_cas, dhdot_dv_cas, dhdot_da_cas}, {"q", "v", "a"},
+      {"dh_dq", "dhdot_dq", "dhdot_dv", "dhdot_da"});
 
   return CD;
 }
@@ -669,6 +743,38 @@ casadi::Function CasadiKinDyn::Impl::frameAcceleration(std::string link_name,
                                {"ee_acc_linear", "ee_acc_angular"});
 
   return FRAME_ACCEL;
+}
+
+casadi::Function
+CasadiKinDyn::Impl::jointVelocityDerivatives(std::string link_name,
+                                             ReferenceFrame ref) {
+  auto model = _model_dbl.cast<Scalar>();
+  pinocchio::DataTpl<Scalar> data(model);
+
+  auto frame_idx = model.getFrameId(link_name);
+
+  // Compute expression
+  Eigen::Matrix<Scalar, 6, -1> partial_dq, partial_dv;
+  partial_dq.setZero(6, nv());
+  partial_dv.setZero(6, nv());
+
+  pinocchio::computeForwardKinematicsDerivatives(
+      model, data, cas_to_eig(_q), cas_to_eig(_qdot), cas_to_eig(_qddot));
+
+  auto joint_id = model.frames[frame_idx].parent;
+
+  pinocchio::getJointVelocityDerivatives(model, data, joint_id,
+                                         pinocchio::ReferenceFrame(ref),
+                                         partial_dq, partial_dv);
+
+  auto v_partial_dq_cas = eigmat_to_cas(partial_dq);
+  auto v_partial_dv_cas = eigmat_to_cas(partial_dv);
+
+  casadi::Function JVD("jointVelocityDerivatives", {_q, _qdot},
+                       {v_partial_dq_cas, v_partial_dv_cas}, {"q", "v"},
+                       {"v_partial_dq", "v_partial_dv"});
+
+  return JVD;
 }
 
 casadi::Function CasadiKinDyn::Impl::fk(std::string link_name) {
@@ -809,11 +915,10 @@ CasadiKinDyn::Impl::eigmat_to_cas(const CasadiKinDyn::Impl::MatrixXs &eig) {
   return sx;
 }
 
-CasadiKinDyn::CasadiKinDyn(std::string urdf_string, std::string root_name,
-                           bool verbose,
-                           std::map<std::string, double> fixed_joints) {
+CasadiKinDyn::CasadiKinDyn(std::string urdf_string, JointType root_joint,
+                           bool verbose, MapJointConfiguration fixed_joints) {
   auto urdf = urdf::parseURDF(urdf_string);
-  _impl = std::make_unique<Impl>(urdf, root_name, verbose, fixed_joints);
+  _impl = std::make_unique<Impl>(urdf, root_joint, verbose, fixed_joints);
   _impl->urdf = urdf_string;
 }
 
@@ -865,6 +970,10 @@ casadi::Function CasadiKinDyn::computeCentroidalDynamics() {
   return impl().computeCentroidalDynamics();
 }
 
+casadi::Function CasadiKinDyn::computeCentroidalDynamicsDerivatives() {
+  return impl().computeCentroidalDynamicsDerivatives();
+}
+
 casadi::Function CasadiKinDyn::ccrba() { return impl().ccrba(); }
 
 casadi::Function CasadiKinDyn::crba() { return impl().crba(); }
@@ -883,6 +992,11 @@ casadi::Function CasadiKinDyn::frameVelocity(std::string link_name,
 casadi::Function CasadiKinDyn::frameAcceleration(std::string link_name,
                                                  ReferenceFrame ref) {
   return impl().frameAcceleration(link_name, ref);
+}
+
+casadi::Function CasadiKinDyn::jointVelocityDerivatives(std::string link_name,
+                                                        ReferenceFrame ref) {
+  return impl().jointVelocityDerivatives(link_name, ref);
 }
 
 casadi::Function CasadiKinDyn::centerOfMass() { return impl().centerOfMass(); }

@@ -1,6 +1,6 @@
 [project]
 name = "cmeel_casadi_kin_dyn"
-version = "1.6.7"
+version = "1.6.14"
 description = "Cmeel distribution of a package for generation of symbolic (casadi::SX) expressions of robot kinematics and dynamics. Based on URDF and Pinocchio."
 readme = "README.md"
 requires-python = ">= 3.9"
@@ -8,12 +8,12 @@ license = "MIT License"
 authors = [{ name = "Lev Kozlov", email = "kozlov.l.a10@gmail.com" }]
 dependencies = [
     "cmeel_casadi==0.1.1",
-    "pin==2.6.21",
-    "eigenpy==3.1.4",
-    "cmeel-tinyxml==2.6.2.2",
+    "pin==2.6.20",
+    "eigenpy==3.1.3",
+    "cmeel-tinyxml==2.6.2.3",
     "cmeel-eigen==3.4.0.2",
     "cmeel-urdfdom_headers==1.1.0",
-    "cmeel-urdfdom==3.1.1",
+    "cmeel-urdfdom==3.1.1.1",
 ]
 
 [project.urls]
@@ -25,12 +25,12 @@ changelog = "https://github.com/lvjonok/casadi_kin_dyn/CHANGELOG.md"
 requires = [
     "cmeel[build]",
     "cmeel_casadi==0.1.1",
-    "pin==2.6.21",
-    "eigenpy==3.1.4",
-    "cmeel-tinyxml==2.6.2.2",
+    "pin==2.6.20",
+    "eigenpy==3.1.3",
+    "cmeel-tinyxml==2.6.2.3",
     "cmeel-eigen==3.4.0.2",
     "cmeel-urdfdom_headers==1.1.0",
-    "cmeel-urdfdom==3.1.1",
+    "cmeel-urdfdom==3.1.1.1",
 ]
 build-backend = "cmeel.build"
 

@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <Eigen/Dense>
@@ -20,16 +21,25 @@ class CasadiKinDyn {
 public:
   typedef std::shared_ptr<CasadiKinDyn> Ptr;
 
+  typedef std::map<std::string, std::variant<std::vector<double>, double>>
+      MapJointConfiguration;
+
   enum ReferenceFrame {
     WORLD = 0,              // This is spatial in world frame
     LOCAL = 1,              // This is spatial in local frame
     LOCAL_WORLD_ALIGNED = 2 // This is classical in world frame
   };
 
-  CasadiKinDyn(std::string urdf_string, std::string root_name = std::string(),
+  enum JointType {
+    OMIT = 0, // Do not specify directly the joint
+    FREE_FLYER = 1,
+    PLANAR = 2,
+    // TODO: other types from Pinocchio can be added here
+  };
+
+  CasadiKinDyn(std::string urdf_string, JointType root_joint = JointType::OMIT,
                bool verbose = false,
-               std::map<std::string, double> fixed_joints =
-                   std::map<std::string, double>{});
+               MapJointConfiguration fixed_joints = MapJointConfiguration{});
 
   CasadiKinDyn(const CasadiKinDyn &other);
 
@@ -61,6 +71,8 @@ public:
 
   casadi::Function computeCentroidalDynamics();
 
+  casadi::Function computeCentroidalDynamicsDerivatives();
+
   casadi::Function ccrba();
 
   casadi::Function crba();
@@ -81,6 +93,9 @@ public:
   casadi::Function frameVelocity(std::string link_name, ReferenceFrame ref);
 
   casadi::Function frameAcceleration(std::string link_name, ReferenceFrame ref);
+
+  casadi::Function jointVelocityDerivatives(std::string link_name,
+                                            ReferenceFrame ref);
 
   casadi::Function kineticEnergy();
 

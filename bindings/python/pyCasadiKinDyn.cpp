@@ -1,7 +1,9 @@
 #include <casadi/casadi.hpp>
 #include <casadi_kin_dyn/casadi_kin_dyn.h>
+#include <casadi_kin_dyn/collision_handler.h>
 
 #include <pybind11/detail/common.h>
+#include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -36,10 +38,10 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
   py::class_<CasadiKinDyn, CasadiKinDyn::Ptr> casadikindyn(m, "CasadiKinDyn");
 
   casadikindyn
-      .def(py::init<std::string, std::string, bool,
-                    std::map<std::string, double>>(),
-           py::arg("urdf"), py::arg("root_joint") = std::string(),
-           py::arg("verbose") = false, py::arg("fixed_joints") = py::dict())
+      .def(py::init<std::string, CasadiKinDyn::JointType, bool,
+                    CasadiKinDyn::MapJointConfiguration>(),
+           py::arg("urdf"), py::arg("root_joint"), py::arg("verbose") = false,
+           py::arg("fixed_joints") = py::dict())
       .def(py::init<std::string>())
       .def("nq", &CasadiKinDyn::nq)
       .def("nv", &CasadiKinDyn::nv)
@@ -62,6 +64,9 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .def("ccrba", make_deserialized(&CasadiKinDyn::ccrba))
       .def("computeCentroidalDynamics",
            make_deserialized(&CasadiKinDyn::computeCentroidalDynamics))
+      .def("computeCentroidalDynamicsDerivatives",
+           make_deserialized(
+               &CasadiKinDyn::computeCentroidalDynamicsDerivatives))
       .def("fk",
            make_deserialized<CasadiKinDyn, std::string>(&CasadiKinDyn::fk))
       .def("centerOfMass", make_deserialized(&CasadiKinDyn::centerOfMass))
@@ -77,6 +82,9 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .def("frameAcceleration",
            make_deserialized<CasadiKinDyn, std::string, Ref>(
                &CasadiKinDyn::frameAcceleration))
+      .def("jointVelocityDerivatives",
+           make_deserialized<CasadiKinDyn, std::string>(
+               &CasadiKinDyn::jointVelocityDerivatives))
       .def("kineticEnergy", make_deserialized(&CasadiKinDyn::kineticEnergy))
       .def("potentialEnergy", make_deserialized(&CasadiKinDyn::potentialEnergy))
       .def("jointTorqueRegressor",
@@ -95,4 +103,24 @@ PYBIND11_MODULE(casadi_kin_dyn, m) {
       .value("LOCAL_WORLD_ALIGNED",
              CasadiKinDyn::ReferenceFrame::LOCAL_WORLD_ALIGNED)
       .export_values();
+
+  py::enum_<CasadiKinDyn::JointType>(casadikindyn, "JointType")
+      .value("OMIT", CasadiKinDyn::JointType::OMIT)
+      .value("FREE_FLYER", CasadiKinDyn::JointType::FREE_FLYER)
+      .value("PLANAR", CasadiKinDyn::JointType::PLANAR);
+
+  // collision handler
+  py::class_<CasadiCollisionHandler, CasadiCollisionHandler::Ptr>
+      collisionhandler(m, "CollisionHandler");
+
+  collisionhandler.def(py::init<CasadiKinDyn::Ptr>(), py::arg("ckd"))
+      .def("numPairs", &CasadiCollisionHandler::numPairs)
+      .def("distance",
+           [](CasadiCollisionHandler &ch, Eigen::Ref<const Eigen::VectorXd> q,
+              Eigen::Ref<Eigen::VectorXd> d) { return ch.distance(q, d); })
+      .def("jacobian", [](CasadiCollisionHandler &ch,
+                          Eigen::Ref<const Eigen::VectorXd> q_array,
+                          Eigen::Ref<Eigen::MatrixXd> J_array) {
+        return ch.distanceJacobian(q_array, J_array);
+      });
 }
